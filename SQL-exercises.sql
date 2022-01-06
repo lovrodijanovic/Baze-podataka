@@ -102,3 +102,148 @@ ON pc1.speed = pc2.speed AND pc1.ram = pc2.ram
 WHERE pc1.model > pc2.model
 
 --17.Get the laptop models that have a speed smaller than the speed of any PC. Result set: type, model, speed.
+SELECT DISTINCT Product.type, Laptop.model, Laptop.speed
+FROM Product JOIN Laptop
+ON Product.model = Laptop.model
+WHERE Laptop.speed < ALL(
+  SELECT speed
+  FROM PC
+)
+
+--18.Find the makers of the cheapest color printers. Result set: maker, price.
+SELECT DISTINCT Product.maker, Printer.price
+FROM Product JOIN Printer
+ON Product.model = Printer.model
+WHERE Printer.color = 'y'
+AND Printer.price = (
+  SELECT MIN(price)
+  FROM Printer
+  WHERE color = 'y'
+)
+
+--19.For each maker having models in the Laptop table, find out the average screen size of the laptops he produces.Result set: maker, average screen size.
+SELECT Product.maker, AVG(Laptop.screen) as AverageScreenSize
+FROM Product JOIN Laptop
+ON Product.model = Laptop.model
+GROUP BY maker
+
+--20.Find the makers producing at least three distinct models of PCs.
+SELECT maker, COUNT(model) AS Number_Of_Models
+FROM Product
+WHERE type = 'PC'
+GROUP BY maker
+HAVING COUNT(model) >= 3
+
+--21.Find out the maximum PC price for each maker having models in the PC table.
+SELECT Product.maker, MAX(PC.price) AS Highest_Price
+FROM Product JOIN PC
+ON Product.model = PC.model
+GROUP BY Product.maker
+
+--22.For each value of PC speed that exceeds 600 MHz, find out the average price of PCs with identical speeds.
+SELECT speed, AVG(price) AS Average_Price
+FROM PC
+WHERE speed > 600
+GROUP BY speed
+
+--23.Get the makers producing both PCs having a speed of 750 MHz or higher and laptops with a speed of 750 MHz or higher.
+SELECT Product.maker
+FROM Product JOIN PC
+ON Product.model = PC.model
+WHERE PC.speed >= 750
+
+INTERSECT
+
+SELECT Product.maker
+FROM Product JOIN Laptop
+ON Product.model = Laptop.model
+WHERE Laptop.speed >= 750
+
+--24.List the models of any type having the highest price of all products present in the database.
+WITH MAX
+AS (
+	SELECT model, price FROM PC
+	UNION 
+	SELECT model, price FROM Laptop
+	UNION 
+	SELECT model, price FROM printer
+)
+
+SELECT model FROM MAX
+WHERE price = (
+	SELECT MAX(price) 
+	FROM MAX
+)
+
+--25.Find the printer makers also producing PCs with the lowest RAM capacity and the highest processor speed of all PCs having the lowest RAM capacity.
+SELECT DISTINCT maker
+FROM Product JOIN PC
+ON Product.model = PC.model
+WHERE ram = (
+  SELECT MIN(ram)
+  FROM PC
+)
+AND speed = (
+  SELECT MAX(speed)
+  FROM PC
+  WHERE ram = (  
+    SELECT MIN(ram)
+    FROM PC
+  )
+)
+AND maker IN (
+	SELECT maker
+	FROM Product
+	WHERE TYPE='Printer'
+)
+
+--26.Find out the average price of PCs and laptops produced by maker A.Result set: one overall average price for all items.
+SELECT AVG(price)
+FROM(
+    SELECT price
+    FROM Product JOIN PC
+    ON Product.model = PC.model
+    WHERE maker = 'A'
+
+    UNION ALL
+
+    SELECT price
+    FROM Product JOIN Laptop
+    ON Product.model = Laptop.model
+    WHERE maker = 'A'
+) AS AVG_Price
+
+--27.Find out the average hard disk drive capacity of PCs produced by makers who also manufacture printers. Result set: maker, average HDD capacity.
+SELECT maker, AVG(hd)
+FROM Product JOIN PC
+ON Product.model = PC.model
+WHERE maker IN (
+   SELECT maker
+   FROM Product
+   WHERE type = 'Printer'
+)
+GROUP BY maker
+
+--28.Using Product table, find out the number of makers who produce only one model.
+WITH total_count
+AS (
+    SELECT maker
+    FROM product 
+    GROUP BY maker 
+    HAVING COUNT(model) = 1
+)
+SELECT COUNT(maker)
+FROM total_count
+
+--31.For ship classes with a gun caliber of 16 in. or more, display the class and the country.
+SELECT class, country
+FROM Classes
+WHERE bore >= 16
+
+--40.Get the makers who produce only one product type and more than one model. Output: maker, type.
+SELECT DISTINCT maker, MAX(type) AS Type
+FROM Product
+GROUP BY maker
+HAVING COUNT(DISTINCT type) = 1 AND COUNT(model) > 1
+
+
